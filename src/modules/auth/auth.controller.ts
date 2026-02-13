@@ -18,19 +18,19 @@ export class AuthController {
   private storeCookies(response: FastifyReply, accessToken: string, refreshToken: string) {
     const cookieOptions: CookieSerializeOptions = {
       httpOnly: true,
-      sameSite: 'none',
+      sameSite: 'lax',
       path: '/',
       secure: this.configService.get('NODE_ENV') === 'production',
     };
 
     response.setCookie('accessToken', accessToken, {
       ...cookieOptions,
-      maxAge: 15 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
     });
 
     response.setCookie('refreshToken', refreshToken, {
       ...cookieOptions,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
     });
   }
 

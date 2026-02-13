@@ -23,9 +23,10 @@ export class AuthGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<FastifyRequest>();
     const accessToken = request.cookies['accessToken'];
+    const refreshToken = request.cookies['refreshToken'];
 
-    if (!accessToken) {
-      throw new UnauthorizedException({ error: 'TokenInvalid' });
+    if (!accessToken && refreshToken) {
+      throw new UnauthorizedException({ error: 'TokenExpired' });
     }
 
     try {
