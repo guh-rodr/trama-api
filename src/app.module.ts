@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { HealthModule } from './health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { TransactionModule } from './modules/cashflow/transaction.module';
 import { CategoryModule } from './modules/category/category.module';
@@ -11,6 +12,7 @@ import { StatsModule } from './modules/stats/stats.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    HealthModule,
     AuthModule,
     CustomerModule,
     SaleModule,
