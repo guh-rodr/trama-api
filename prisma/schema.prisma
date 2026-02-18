@@ -37,7 +37,7 @@ model Customer {
   phone     String?
   note      String?
   createdAt DateTime @default(now())
-  purchases Sale[]
+  sales     Sale[]
 }
 
 model SaleItem {

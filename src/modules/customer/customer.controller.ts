@@ -24,9 +24,9 @@ export class CustomerController {
     return this.customerService.getOverview(id);
   }
 
-  @Get(':id/purchases')
-  getPurchases(@Param('id') id: string, @Query('cursor') cursor: string) {
-    return this.customerService.getPurchases(id);
+  @Get(':id/sales')
+  getSales(@Param('id') id: string) {
+    return this.customerService.getSales(id);
   }
 
   @Get(':id/stats')

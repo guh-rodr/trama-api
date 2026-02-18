@@ -28,12 +28,12 @@ export class CustomerService {
   }
 
   async getOverview(id: string) {
-    const { purchases, ...customer } = await this.prisma.customer.findFirst({
+    const { sales, ...customer } = await this.prisma.customer.findUniqueOrThrow({
       where: { id },
       select: {
         name: true,
         phone: true,
-        purchases: {
+        sales: {
           orderBy: { purchasedAt: 'desc' },
           take: 1,
         },
@@ -42,7 +42,7 @@ export class CustomerService {
 
     return {
       ...customer,
-      lastPurchaseAt: purchases[0]?.purchasedAt,
+      lastPurchaseAt: sales[0]?.purchasedAt,
     };
   }
 
@@ -126,18 +126,22 @@ export class CustomerService {
     };
   }
 
-  async getPurchases(customerId: string) {
-    const sales = await this.prisma.sale.findMany({
-      where: { customerId },
+  async getSales(customerId: string) {
+    const { sales } = await this.prisma.customer.findUniqueOrThrow({
+      where: { id: customerId },
       select: {
-        id: true,
-        total: true,
-        profit: true,
-        purchasedAt: true,
-        transactions: {
-          select: { value: true },
+        sales: {
+          select: {
+            id: true,
+            total: true,
+            profit: true,
+            purchasedAt: true,
+            transactions: {
+              select: { value: true },
+            },
+            _count: { select: { items: true, transactions: true } },
+          },
         },
-        _count: { select: { items: true, transactions: true } },
       },
     });
 
