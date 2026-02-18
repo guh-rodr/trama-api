@@ -121,6 +121,8 @@ export class CustomerService {
   }
 
   async getStats(id: string) {
+    await this.prisma.customer.findUniqueOrThrow({ where: { id } });
+
     const metrics = await this.getMetrics(id);
     const preferences = await this.getPreferences(id);
 
