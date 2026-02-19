@@ -1,5 +1,5 @@
 import fastifyCookie from '@fastify/cookie';
-import { ValidationPipe } from '@nestjs/common';
+import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module';
@@ -16,7 +16,22 @@ async function bootstrap() {
     credentials: true,
   });
 
-  app.useGlobalPipes(new ValidationPipe({ transform: true }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      exceptionFactory: (errors) => {
+        const formattedErrors = errors.reduce((acc, err) => {
+          acc[err.property] = Object.values(err.constraints ?? {});
+          return acc;
+        }, {});
+
+        return new BadRequestException({
+          message: 'Erro ao validar os campos',
+          validation: formattedErrors,
+        });
+      },
+    }),
+  );
 
   const httpAdapter = app.get(HttpAdapterHost);
   app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));

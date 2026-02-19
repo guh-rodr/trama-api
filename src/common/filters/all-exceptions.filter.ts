@@ -2,6 +2,10 @@ import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpExceptionBody
 import { HttpAdapterHost } from '@nestjs/core';
 import { Prisma } from 'generated/prisma/client';
 
+interface ExceptionResponse extends HttpExceptionBody {
+  validation?: Record<string, string[]>;
+}
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   constructor(private readonly httpAdapterHost: HttpAdapterHost) {}
@@ -13,22 +17,23 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let httpStatus = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Erro interno do servidor';
     let errorType = 'InternalServerError';
+    let validation: ExceptionResponse['validation'] = undefined;
 
     if (exception instanceof HttpException) {
       // erros lançados manualmente ou pelo nest
 
       httpStatus = exception.getStatus();
-      const response = exception.getResponse();
+      const response = exception.getResponse() as ExceptionResponse;
 
-      if (typeof response === 'string') {
-        message = response;
+      errorType = response.error;
+
+      if (typeof response?.message === 'string') {
+        message = response.message;
       }
 
-      if (typeof response === 'object' && response !== null) {
-        const responseBody = response as HttpExceptionBody;
-
-        message = Array.isArray(responseBody.message) ? responseBody.message[0] : responseBody.message;
-        errorType = responseBody.error || errorType;
+      if (typeof response?.validation === 'object' && response?.validation !== null) {
+        errorType = 'ValidationError';
+        validation = response.validation;
       }
     } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       // erros lançados pelo prisma
@@ -66,6 +71,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       statusCode: httpStatus,
       error: errorType,
       message,
+      validation,
     };
 
     httpAdapter.reply(ctx.getResponse(), response, httpStatus);
