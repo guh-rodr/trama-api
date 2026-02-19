@@ -30,6 +30,7 @@ export class AuthController {
 
     response.setCookie('refreshToken', refreshToken, {
       ...cookieOptions,
+      path: '/auth/refresh',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
     });
   }
