@@ -26,7 +26,7 @@ export class AuthGuard implements CanActivate {
     const refreshToken = request.cookies['refreshToken'];
 
     if (!accessToken && refreshToken) {
-      throw new UnauthorizedException({ error: 'TokenExpired' });
+      throw new UnauthorizedException({ error: 'TokenExpired', message: 'Token expirado' });
     }
 
     try {
@@ -36,10 +36,10 @@ export class AuthGuard implements CanActivate {
       request['user'] = user;
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
-        throw new UnauthorizedException({ error: 'TokenExpired' });
+        throw new UnauthorizedException({ error: 'TokenExpired', message: 'Token expirado' });
       }
 
-      throw new UnauthorizedException({ error: 'TokenInvalid' });
+      throw new UnauthorizedException({ error: 'TokenInvalid', message: 'Token inválido' });
     }
 
     return true;
