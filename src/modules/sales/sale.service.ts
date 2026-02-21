@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from 'generated/prisma/client';
 import { DateTime } from 'luxon';
 import { buildPrismaFilter } from 'src/common/utils/filter.util';
@@ -9,6 +9,15 @@ import { CreateInstallmentBodyDto } from './dto/create-installment.dto';
 import { CreateSaleBodyDto } from './dto/create-sale.dto';
 import { DeleteManySaleBodyDto } from './dto/delete-sale.dto';
 import { ListSalesBodyDto, ListSalesQueryDto } from './dto/list-sales.dto';
+import {
+  CreateInstallmentResponseDto,
+  CreateSaleResponseDto,
+  SaleInstallmentResponseDto,
+  SaleItemResponseDto,
+  SaleListResponseDto,
+  SaleOverviewResponseDto,
+  SaleRowDto,
+} from './dto/sale-response.dto';
 import { SALE_FILTERS_MAP } from './sale.filters';
 import { SALE_SORTABLE_FIELDS } from './sale.sort';
 
@@ -16,7 +25,7 @@ import { SALE_SORTABLE_FIELDS } from './sale.sort';
 export class SaleService {
   constructor(private prisma: PrismaService) {}
 
-  async create(data: CreateSaleBodyDto) {
+  async create(data: CreateSaleBodyDto): Promise<CreateSaleResponseDto> {
     const purchasedAt = DateTime.fromISO(data.purchasedAt, { zone: 'America/Sao_Paulo' }).toJSDate();
     const installmentPaidAt = DateTime.fromISO(data.installment?.paidAt, { zone: 'America/Sao_Paulo' }).toJSDate();
     const saleType = !!data.installment ? 'Parcela 1' : 'À vista';
@@ -74,7 +83,7 @@ export class SaleService {
       };
     });
 
-    await this.prisma.sale.create({
+    const sale = await this.prisma.sale.create({
       data: {
         ...summary,
         customerId: data.customerId,
@@ -96,7 +105,7 @@ export class SaleService {
     return sale;
   }
 
-  async getOverview(saleId: string) {
+  async getOverview(saleId: string): Promise<SaleOverviewResponseDto> {
     const sale = await this.prisma.sale.findFirstOrThrow({
       where: { id: saleId },
       select: {
@@ -130,7 +139,7 @@ export class SaleService {
     };
   }
 
-  async getItems(saleId: string) {
+  async getItems(saleId: string): Promise<SaleItemResponseDto[]> {
     const sale = await this.prisma.sale.findFirstOrThrow({
       where: {
         id: saleId,
@@ -168,7 +177,7 @@ export class SaleService {
     await this.prisma.sale.deleteMany({ where: { id: { in: data.ids } } });
   }
 
-  async getInstallments(saleId: string) {
+  async getInstallments(saleId: string): Promise<SaleInstallmentResponseDto[]> {
     const sale = await this.prisma.sale.findFirstOrThrow({
       where: {
         id: saleId,
@@ -197,7 +206,7 @@ export class SaleService {
     return result;
   }
 
-  async createInstallment(saleId: string, data: CreateInstallmentBodyDto) {
+  async createInstallment(saleId: string, data: CreateInstallmentBodyDto): Promise<CreateInstallmentResponseDto> {
     const paidAt = DateTime.fromISO(data.paidAt, { zone: 'America/Sao_Paulo' }).toJSDate();
 
     const sale = await this.prisma.sale.findFirst({
@@ -257,7 +266,7 @@ export class SaleService {
     });
   }
 
-  async listTable(options: ListSalesQueryDto, filter: ListSalesBodyDto) {
+  async listTable(options: ListSalesQueryDto, filter: ListSalesBodyDto): Promise<SaleListResponseDto> {
     const sort = buildPrismaSort(options, SALE_SORTABLE_FIELDS);
     const pagination = buildPrismaPagination(options);
 
