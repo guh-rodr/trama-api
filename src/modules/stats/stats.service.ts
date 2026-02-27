@@ -1,13 +1,47 @@
 import { Injectable } from '@nestjs/common';
-import { DateTime } from 'luxon';
+import { DateTime, WeekdayNumbers } from 'luxon';
 import { PrismaService } from 'src/prisma.service';
 import { Method, Period } from './stats.type';
+
+interface Range {
+  label: string;
+  startDate: Date;
+  endDate: Date;
+}
 
 @Injectable()
 export class StatsService {
   constructor(private prisma: PrismaService) {}
 
-  private getWeeksOfMonthLabels() {
+  private getYearLabelsRanges(): Range[] {
+    const labels = [
+      'Janeiro',
+      'Fevereiro',
+      'Março',
+      'Abril',
+      'Maio',
+      'Junho',
+      'Julho',
+      'Agosto',
+      'Setembro',
+      'Outubro',
+      'Novembro',
+      'Dezembro',
+    ];
+
+    return labels.map((label, i) => {
+      const startOfMonth = DateTime.fromObject({ month: i + 1 }, { zone: 'America/Sao_Paulo' }).startOf('month');
+      const endOfMonth = startOfMonth.endOf('month');
+
+      return {
+        label,
+        startDate: startOfMonth.toJSDate(),
+        endDate: endOfMonth.toJSDate(),
+      };
+    });
+  }
+
+  private getMonthLabelsRanges(): Range[] {
     const now = DateTime.now().setZone('America/Sao_Paulo');
 
     const startOfMonth = now.startOf('month');
@@ -15,167 +49,140 @@ export class StatsService {
 
     let currentWeekStart = startOfMonth.startOf('week');
 
-    const labels: string[] = [];
+    const ranges: Range[] = [];
     let weekIndex = 1;
 
     while (currentWeekStart <= endOfMonth) {
-      labels.push(`Semana ${weekIndex}`);
+      const currentWeekEnd = currentWeekStart.endOf('week');
+
+      const startDate = DateTime.max(currentWeekStart, startOfMonth);
+      const endDate = DateTime.min(currentWeekEnd, endOfMonth);
+
+      ranges.push({
+        label: `Semana ${weekIndex} (${startDate.day} à ${endDate.day})`,
+        startDate: startDate.toJSDate(),
+        endDate: endDate.toJSDate(),
+      });
 
       currentWeekStart = currentWeekStart.plus({ weeks: 1 });
       weekIndex++;
     }
 
-    return labels;
+    return ranges;
+  }
+
+  private getWeekLabelsRanges(): Range[] {
+    const labels = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+
+    return labels.map((label, i: WeekdayNumbers) => {
+      const weekday = (i + 1) as WeekdayNumbers;
+
+      const startOfDay = DateTime.fromObject({ weekday }, { zone: 'America/Sao_Paulo' }).startOf('day');
+      const endOfDay = startOfDay.endOf('day');
+
+      return {
+        label,
+        startDate: startOfDay.toJSDate(),
+        endDate: endOfDay.toJSDate(),
+      };
+    });
   }
 
   private getChartLabelsByPeriod(period: Period) {
-    const labels: Record<Period, () => string[]> = {
+    const labels: Record<Period, () => Range[]> = {
       today: () => [],
-      week: () => ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'],
-      month: () => this.getWeeksOfMonthLabels(),
-      year: () => [
-        'Janeiro',
-        'Fevereiro',
-        'Março',
-        'Abril',
-        'Maio',
-        'Junho',
-        'Julho',
-        'Agosto',
-        'Setembro',
-        'Outubro',
-        'Novembro',
-        'Dezembro',
-      ],
+      week: () => this.getWeekLabelsRanges(),
+      month: () => this.getMonthLabelsRanges(),
+      year: () => this.getYearLabelsRanges(),
     };
 
     return labels[period]();
   }
 
-  async getChartData(period: Period, method: Method) {
-    const ranges: { start: Date; end: Date }[] = [];
-    const labels = this.getChartLabelsByPeriod(period);
+  private async getCashBasisChartData(ranges: Range[]) {
     const chartData = new Map<number, { col_1: number; col_2: number }>();
 
-    labels.forEach((_, index) => {
-      chartData.set(index, { col_1: 0, col_2: 0 });
-    });
-
-    if (period === 'year') {
-      let currentMonth = DateTime.now().setZone('America/Sao_Paulo').startOf('year');
-
-      for (var i = 0; i < labels.length; i++) {
-        const start = currentMonth;
-        const end = currentMonth.endOf('month');
-
-        ranges.push({
-          start: start.toJSDate(),
-          end: end.toJSDate(),
-        });
-
-        currentMonth = currentMonth.plus({ months: 1 });
-      }
-    }
-
-    if (period === 'month') {
-      let startDate = DateTime.now().setZone('America/Sao_Paulo').startOf('month');
-      const endOfMonth = startDate.endOf('month');
-
-      for (var i = 0; i < labels.length; i++) {
-        let daysUntil = 7 - startDate.weekday;
-
-        const potentialEndDate = startDate.plus({ days: daysUntil }).endOf('day');
-        const endDate = potentialEndDate > endOfMonth ? endOfMonth : potentialEndDate;
-
-        ranges.push({
-          start: startDate.toJSDate(),
-          end: endDate.toJSDate(),
-        });
-
-        startDate = endDate.plus({ day: 1 }).startOf('day');
-      }
-    }
-
-    if (period === 'week') {
-      let currentDay = DateTime.now().setZone('America/Sao_Paulo').startOf('week').minus({ days: 1 });
-
-      for (var i = 0; i < labels.length; i++) {
-        const start = currentDay.startOf('day');
-        const end = currentDay.endOf('day');
-
-        ranges.push({
-          start: start.toJSDate(),
-          end: end.toJSDate(),
-        });
-
-        currentDay = currentDay.plus({ day: 1 });
-      }
-    }
-
-    if (method === 'cash_basis') {
-      await Promise.all(
-        ranges.map(async (range, index) => {
-          const result = await this.prisma.cashFlowTransaction.groupBy({
-            by: ['flow'],
-            where: {
-              date: {
-                gte: range.start,
-                lte: range.end,
-              },
+    await Promise.all(
+      ranges.map(async (range, index) => {
+        const result = await this.prisma.cashFlowTransaction.groupBy({
+          by: ['flow'],
+          where: {
+            date: {
+              gte: range.startDate,
+              lte: range.endDate,
             },
-            _sum: { value: true },
-          });
+          },
+          _sum: { value: true },
+        });
 
-          const totalInflow = result.find((r) => r.flow === 'inflow')?._sum.value ?? 0;
-          const totalOutflow = result.find((r) => r.flow === 'outflow')?._sum.value ?? 0;
+        const totalInflow = result.find((r) => r.flow === 'inflow')?._sum.value ?? 0;
+        const totalOutflow = result.find((r) => r.flow === 'outflow')?._sum.value ?? 0;
 
-          chartData.set(index, { col_1: totalInflow, col_2: totalOutflow });
-        }),
-      );
-    }
+        chartData.set(index, { col_1: totalInflow, col_2: totalOutflow });
+      }),
+    );
 
-    if (method === 'accrual_basis') {
-      await Promise.all(
-        ranges.map(async (range, index) => {
-          const sales = await this.prisma.sale.aggregate({
-            where: { purchasedAt: { gte: range.start, lte: range.end } },
-            _sum: { total: true },
-          });
+    return chartData;
+  }
 
-          const items = await this.prisma.saleItem.aggregate({
-            where: { sale: { purchasedAt: { gte: range.start, lte: range.end } } },
-            _sum: { costPrice: true },
-          });
+  private async getAccrualBasisChartData(ranges: Range[]) {
+    const chartData = new Map<number, { col_1: number; col_2: number }>();
 
-          const groupedTransactions = await this.prisma.cashFlowTransaction.groupBy({
-            by: ['flow', 'saleId'],
-            where: {
-              category: {
-                in: ['OPERATIONAL_EXPENSE', 'PERSONNEL_EXPENSE', 'TAX_EXPENSE', 'SALES_REVENUE', 'OTHER_INCOME'],
-              },
-              date: {
-                gte: range.start,
-                lte: range.end,
-              },
+    await Promise.all(
+      ranges.map(async (range, index) => {
+        const sales = await this.prisma.sale.aggregate({
+          where: { purchasedAt: { gte: range.startDate, lte: range.endDate } },
+          _sum: { total: true },
+        });
+
+        const items = await this.prisma.saleItem.aggregate({
+          where: { sale: { purchasedAt: { gte: range.startDate, lte: range.endDate } } },
+          _sum: { costPrice: true },
+        });
+
+        const groupedTransactions = await this.prisma.cashFlowTransaction.groupBy({
+          by: ['flow', 'saleId'],
+          where: {
+            category: {
+              in: ['OPERATIONAL_EXPENSE', 'PERSONNEL_EXPENSE', 'TAX_EXPENSE', 'SALES_REVENUE', 'OTHER_INCOME'],
             },
-            _sum: { value: true },
-          });
+            date: {
+              gte: range.startDate,
+              lte: range.endDate,
+            },
+          },
+          _sum: { value: true },
+        });
 
-          const manualRevenue = groupedTransactions.find((t) => t.flow === 'inflow' && !t.saleId)?._sum.value ?? 0;
-          const expensesOutflow = groupedTransactions.find((t) => t.flow === 'outflow')?._sum.value ?? 0;
+        const manualRevenue = groupedTransactions.find((t) => t.flow === 'inflow' && !t.saleId)?._sum.value ?? 0;
+        const expensesOutflow = groupedTransactions.find((t) => t.flow === 'outflow')?._sum.value ?? 0;
 
-          const grossRevenue = (sales._sum.total ?? 0) + manualRevenue;
-          const costs = (items._sum.costPrice ?? 0) + expensesOutflow;
+        const grossRevenue = (sales._sum.total ?? 0) + manualRevenue;
+        const costs = (items._sum.costPrice ?? 0) + expensesOutflow;
 
-          chartData.set(index, { col_1: grossRevenue, col_2: costs });
-        }),
-      );
-    }
+        chartData.set(index, { col_1: grossRevenue, col_2: costs });
+      }),
+    );
 
-    return labels.map((label, index) => ({
-      label,
+    return chartData;
+  }
+
+  async getChartData(period: Period, method: Method) {
+    const ranges = this.getChartLabelsByPeriod(period);
+
+    const methodsAction = {
+      cash_basis: () => this.getCashBasisChartData(ranges),
+      accrual_basis: () => this.getAccrualBasisChartData(ranges),
+    };
+
+    const chartData = await methodsAction[method]();
+
+    const result = ranges.map((r, index) => ({
+      label: r.label,
       ...chartData.get(index),
     }));
+
+    return result;
   }
 
   // --------------------------------------------------------
@@ -282,6 +289,8 @@ export class StatsService {
   }
 
   async getTopCategories(startDate: string, endDate: string) {
+    // o groupBy do prisma não suporta agrupar por campos de tabelas relacionadas, por isso o uso de raw query
+
     const query = await this.prisma.$queryRaw`
       SELECT
         si.categoryName as category,
@@ -298,12 +307,12 @@ export class StatsService {
   }
 
   async getStats(period: Period, method: Method, startDate: string, endDate: string) {
-    const getStats: Record<Method, unknown> = {
-      accrual_basis: this.getCardStatsInAccrualBasis(startDate, endDate),
-      cash_basis: this.getCardStatsInCashBasis(startDate, endDate),
+    const statsAction: Record<Method, () => unknown> = {
+      accrual_basis: () => this.getCardStatsInAccrualBasis(startDate, endDate),
+      cash_basis: () => this.getCardStatsInCashBasis(startDate, endDate),
     };
 
-    const stats = await getStats[method];
+    const stats = await statsAction[method]();
     const topCategories = await this.getTopCategories(startDate, endDate);
 
     const metricsChart = await this.getChartData(period, method);
