@@ -1,7 +1,11 @@
+<img width="359" height="160" alt="trama-banner" src="https://github.com/user-attachments/assets/cf85f7ea-2933-403e-b727-a0befd58ad48" />
+
+<br>
+<br>
+
 ## 💡 Sobre
 
-Este repositório inclui o back-end do Warp ERP, uma solução de gestão para o comércio local. A API foi construída seguindo os princípios de arquitetura modular do NestJS, focando em escalabilidade e manutenibilidade.
-
+Este repositório inclui o back-end do sistema de ERP **Trama**, uma solução de gestão para o comércio local direcionado ao segmento de moda. A API foi construída seguindo os princípios de arquitetura modular do NestJS, focando em escalabilidade e manutenibilidade.
 
 ## ✨ Principais funcionalidades
 
@@ -19,13 +23,10 @@ Este repositório inclui o back-end do Warp ERP, uma solução de gestão para o
 
 ## 📚 Stack
 
-
 - [Typescript](https://www.typescriptlang.org/)
-
 - [NestJS](https://nestjs.com/)
-
 - [Prisma (com SQLite)](https://www.prisma.io/)
-
+- [Front-end (repositório)](https://github.com/guh-rodr/trama-erp)
 
 ## ⚙️ Como rodar o projeto
 
@@ -35,18 +36,18 @@ Este repositório inclui o back-end do Warp ERP, uma solução de gestão para o
 - pnpm
 
 > [!WARNING]
-> Se não tiver o pnpm instalado, use o seguinte comando antes de prosseguir:  `npm install -g pnpm`
+> Se não tiver o pnpm instalado, use o seguinte comando antes de prosseguir: `npm install -g pnpm`
 
 ### 2. Clonar o repositório
 
 ```bash
-git clone https://github.com/guh-rodr/warp-api.git
+git clone https://github.com/guh-rodr/trama-api.git
 ```
 
 ### 3. Instalar as dependências
 
 ```bash
-cd warp-api
+cd trama-api
 pnpm install
 ```
 
@@ -60,6 +61,7 @@ cp .env.example .env
 Altere o valor de `JWT_SECRET` para uma chave longa e aleatória.
 
 ### 5. Iniciar o banco de dados
+
 ```bash
 pnpm prisma generate
 pnpm prisma migrate dev
@@ -70,3 +72,17 @@ pnpm prisma migrate dev
 ```
 pnpm start:dev
 ```
+
+## 📄 Documentação da API
+
+A API conta com documentação interativa gerada com o Swagger (OpenAPI)
+
+### Versão local
+
+Após iniciar o servidor, acesse:
+http://localhost:3000/docs
+
+### Versão online
+
+Documentação disponível em:
+https://trama-api-y4dl.onrender.com/docs
