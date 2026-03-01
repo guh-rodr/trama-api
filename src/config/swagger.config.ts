@@ -3,7 +3,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 export function setupSwagger(app: INestApplication) {
   const config = new DocumentBuilder()
-    .setTitle('Warp API')
+    .setTitle('Trama API')
     .setDescription(
       'API desenvolvida para proporcionar controle operacional e financeiro completo. Esta documentação detalha todos os endpoints, desde métricas de desempenho até a gestão de produtos, fluxo de caixa, clientes e vendas.',
     )
