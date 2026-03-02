@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { DateTime } from 'luxon';
 import { buildPrismaFilter } from 'src/common/utils/filter.util';
 import { buildPrismaPagination } from 'src/common/utils/pagination.util';
@@ -32,6 +32,17 @@ export class TransactionService {
 
   async update(id: string, data: UpdateTransactionBodyDto) {
     const purchasedAt = DateTime.fromISO(data.date, { zone: 'America/Sao_Paulo' }).toJSDate();
+
+    const transaction = await this.prisma.cashFlowTransaction.findFirstOrThrow({
+      where: { id },
+      select: {
+        saleId: true,
+      },
+    });
+
+    if (transaction.saleId) {
+      throw new ForbiddenException('Não é possível atualizar uma transação relacionada a uma venda');
+    }
 
     const operation = await this.prisma.cashFlowTransaction.update({
       where: { id },
