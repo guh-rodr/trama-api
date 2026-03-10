@@ -11,6 +11,14 @@ class ModelVariant {
   @IsNotEmpty()
   size: string;
 
+  @IsNumber()
+  @Transform(({ value }) => (value ? toCents(value) : undefined))
+  costPrice: number;
+
+  @IsNumber()
+  @Transform(({ value }) => (value ? toCents(value) : undefined))
+  salePrice: number;
+
   @IsInt()
   quantity: number;
 }
