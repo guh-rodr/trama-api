@@ -59,8 +59,8 @@ model ModelVariant {
   id        String     @id @default(cuid())
   color     String?
   size      String?
-  costPrice Int
-  salePrice Int
+  costPrice Int?
+  salePrice Int?
   quantity  Int
   modelId   String
   model     Model      @relation(fields: [modelId], references: [id])
