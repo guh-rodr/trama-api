@@ -18,21 +18,6 @@ export class CategoryService {
       return await this.prisma.category.create({
         data: {
           name: data.name,
-          models: data.models?.length
-            ? {
-                createMany: {
-                  data: data.models,
-                },
-              }
-            : undefined,
-        },
-        include: {
-          models: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
         },
       });
     } catch (error) {
