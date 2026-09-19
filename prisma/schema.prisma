@@ -25,15 +25,6 @@ model RefreshToken {
   user      UserAccount @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model Customer {
-  id        String    @id @default(cuid())
-  name      String
-  phone     String?
-  note      String?
-  createdAt DateTime  @default(now())
-  deletedAt DateTime?
-}
-
 model SaleItem {
   id           String         @id @default(cuid())
   saleId       String
@@ -189,16 +180,6 @@ view ContactStats {
   phone           String?
   hasFinancialLog Boolean
   deletedAt       DateTime?
-}
-
-view CustomerStats {
-  id             String
-  name           String
-  phone          String
-  createdAt      DateTime
-  totalSpent     Int
-  debt           Int
-  lastPurchaseAt DateTime? @db.Timestamp(6)
 }
 
 view SaleStats {
