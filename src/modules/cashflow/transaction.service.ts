@@ -16,13 +16,15 @@ export class TransactionService {
   constructor(private prisma: PrismaService) {}
 
   async create(data: CreateTransactionBodyDto) {
-    const purchasedAt = DateTime.fromISO(data.date, { zone: 'America/Sao_Paulo' }).toJSDate();
+    const ocurredAt = DateTime.fromISO(data.date, { zone: 'America/Sao_Paulo' }).toJSDate();
+    const now = DateTime.now().setZone('America/Sao_Paulo').toJSDate();
 
     const operation = await this.prisma.cashFlowTransaction.create({
       data: {
         ...data,
         origin: 'MANUAL',
-        date: purchasedAt,
+        createdAt: now,
+        ocurredAt,
       },
     });
 
@@ -32,7 +34,7 @@ export class TransactionService {
   }
 
   async update(id: string, data: UpdateTransactionBodyDto) {
-    const purchasedAt = DateTime.fromISO(data.date, { zone: 'America/Sao_Paulo' }).toJSDate();
+    const ocurredAt = DateTime.fromISO(data.date, { zone: 'America/Sao_Paulo' }).toJSDate();
 
     const transaction = await this.prisma.cashFlowTransaction.findFirstOrThrow({
       where: { id },
@@ -49,7 +51,7 @@ export class TransactionService {
       where: { id },
       data: {
         ...data,
-        date: purchasedAt,
+        ocurredAt,
       },
     });
 
