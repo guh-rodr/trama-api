@@ -17,8 +17,11 @@ export class CustomerService {
   constructor(private prisma: PrismaService) {}
 
   async create(data: CreateCustomerBodyDto): Promise<CreateCustomerResponseDto> {
-    const customer = await this.prisma.customer.create({
-      data,
+    const customer = await this.prisma.contact.create({
+      data: {
+        ...data,
+        type: 'CUSTOMER',
+      },
       select: {
         id: true,
         name: true,
@@ -29,8 +32,8 @@ export class CustomerService {
   }
 
   async getOverview(id: string): Promise<CustomerOverviewResponseDto> {
-    const { sales, ...customer } = await this.prisma.customer.findUniqueOrThrow({
-      where: { id },
+    const { sales, ...customer } = await this.prisma.contact.findUniqueOrThrow({
+      where: { type: 'CUSTOMER', id },
       select: {
         name: true,
         phone: true,
@@ -120,7 +123,7 @@ export class CustomerService {
   }
 
   async getStats(id: string): Promise<CustomerStatsResponseDto> {
-    await this.prisma.customer.findUniqueOrThrow({ where: { id } });
+    await this.prisma.contact.findUniqueOrThrow({ where: { type: 'CUSTOMER', id } });
 
     const metrics = await this.getMetrics(id);
     const preferences = await this.getPreferences(id);
@@ -132,7 +135,7 @@ export class CustomerService {
   }
 
   async getSales(customerId: string): Promise<CustomerSaleResponseDto[]> {
-    const { sales } = await this.prisma.customer.findUniqueOrThrow({
+    const { sales } = await this.prisma.contact.findUniqueOrThrow({
       where: { id: customerId },
       select: {
         sales: {
@@ -176,8 +179,8 @@ export class CustomerService {
   }
 
   async update(id: string, data: UpdateCustomerBodyDto): Promise<UpdateCustomerResponseDto> {
-    const customer = await this.prisma.customer.update({
-      where: { id },
+    const customer = await this.prisma.contact.update({
+      where: { type: 'CUSTOMER', id },
       data,
     });
 
@@ -185,8 +188,9 @@ export class CustomerService {
   }
 
   async listAutocomplete(search: string): Promise<CustomerAutocompleteResponseDto[]> {
-    const customers = await this.prisma.customer.findMany({
+    const customers = await this.prisma.contact.findMany({
       where: {
+        type: 'CUSTOMER',
         OR: [{ name: { contains: search } }, { phone: { contains: search } }],
       },
       select: {
