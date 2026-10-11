@@ -1,25 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { DateTime } from 'luxon';
-import { buildPrismaFilter } from 'src/common/utils/filter.util';
-import { buildPrismaPagination } from 'src/common/utils/pagination.util';
-import { buildPrismaSort } from 'src/common/utils/sort.util';
 import { PrismaService } from 'src/prisma.service';
-import { ListSalesBodyDto } from '../sales/dto/list-sales.dto';
-import { CUSTOMER_FILTERS_MAP } from './customer.filters';
-import { CUSTOMER_SORTABLE_FIELDS } from './customer.sort';
 import { CreateCustomerBodyDto } from './dto/create-customer.dto';
 import {
   CreateCustomerResponseDto,
   CustomerAutocompleteResponseDto,
-  CustomerListResponseDto,
   CustomerOverviewResponseDto,
   CustomerPreferencesDto,
   CustomerSaleResponseDto,
   CustomerStatsResponseDto,
   UpdateCustomerResponseDto,
 } from './dto/customer-response.dto';
-import { DeleteManyCustomerBodyDto } from './dto/delete-customer.dto';
-import { ListCustomersQueryDto } from './dto/list-customers.dto';
 import { UpdateCustomerBodyDto } from './dto/update-customer.dto';
 
 @Injectable()
@@ -208,95 +198,5 @@ export class CustomerService {
     });
 
     return customers;
-  }
-
-  async listTable(options: ListCustomersQueryDto, filter: ListSalesBodyDto): Promise<CustomerListResponseDto> {
-    const sort = buildPrismaSort(options, CUSTOMER_SORTABLE_FIELDS);
-    const pagination = buildPrismaPagination(options);
-
-    const queries = buildPrismaFilter(filter, CUSTOMER_FILTERS_MAP);
-
-    const count = await this.prisma.customerStats.count({
-      where: {
-        ...queries,
-        OR: [{ name: { startsWith: options.search } }, { phone: { startsWith: options.search } }],
-      },
-    });
-
-    const rows = await this.prisma.customerStats.findMany({
-      where: {
-        ...queries,
-        OR: [{ name: { startsWith: options.search } }, { phone: { startsWith: options.search } }],
-      },
-      orderBy: sort || { id: 'desc' },
-      ...pagination,
-    });
-
-    const result = {
-      rowCount: count,
-      pageCount: Math.ceil(count / 10),
-      rows,
-    };
-
-    return result;
-  }
-
-  async delete(id: string) {
-    await this.prisma.$transaction(async (tx) => {
-      const hasSales = await tx.sale.findFirst({ where: { customerId: id } });
-
-      if (hasSales) {
-        const now = DateTime.now().setZone('America/Sao_Paulo').toJSDate();
-
-        await tx.customer.update({
-          where: { id },
-          data: {
-            deletedAt: now,
-          },
-        });
-      } else {
-        await tx.customer.delete({ where: { id } });
-      }
-    });
-  }
-
-  async deleteMany({ ids }: DeleteManyCustomerBodyDto) {
-    await this.prisma.$transaction(async (tx) => {
-      const customersWithPurchases = await tx.customer.findMany({
-        where: {
-          id: { in: ids },
-        },
-        select: {
-          id: true,
-          _count: { select: { sales: true } },
-        },
-      });
-
-      const idsWithPurchases = new Set(customersWithPurchases.map((p) => p.id));
-
-      const toSoftDelete = ids.filter((id) => idsWithPurchases.has(id));
-      const toHardDelete = ids.filter((id) => !idsWithPurchases.has(id));
-
-      const now = DateTime.now().setZone('America/Sao_Paulo').toJSDate();
-
-      if (toHardDelete.length > 0) {
-        await tx.customer.deleteMany({
-          where: {
-            id: { in: toHardDelete },
-          },
-        });
-      }
-
-      if (toSoftDelete.length > 0) {
-        await tx.customer.updateMany({
-          where: {
-            id: { in: toSoftDelete },
-          },
-          data: {
-            deletedAt: now,
-          },
-        });
-      }
-    });
   }
 }
