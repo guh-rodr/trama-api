@@ -144,9 +144,6 @@ export class CustomerService {
             total: true,
             profit: true,
             purchasedAt: true,
-            transactions: {
-              select: { value: true },
-            },
             _count: { select: { items: true, transactions: true } },
           },
         },
@@ -154,24 +151,14 @@ export class CustomerService {
     });
 
     const result = sales.map((sale): CustomerSaleResponseDto => {
-      const totalReceived = sale.transactions.reduce((acc, curr) => acc + curr.value, 0);
-
-      const profitMargin = sale.total === 0 ? 0 : sale.profit / sale.total;
-      const profitReceived = totalReceived * profitMargin;
-
-      const isPaid = totalReceived === sale.total;
-
       return {
         id: sale.id,
         itemCount: sale._count.items,
         installmentCount: sale._count.transactions,
-        status: isPaid ? 'paid' : 'pending',
         purchasedAt: sale.purchasedAt,
 
         total: sale.total,
-        totalReceived: totalReceived,
         profit: sale.profit,
-        profitReceived: profitReceived,
       };
     });
 

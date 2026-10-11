@@ -46,23 +46,14 @@ export class CustomerSaleResponseDto {
   @ApiProperty({ example: 1, description: 'Quantidade de parcelas' })
   installmentCount: number;
 
-  @ApiProperty({ example: 'paid', description: 'Status atual', enum: ['paid', 'pending'] })
-  status: 'paid' | 'pending';
-
   @ApiProperty({ example: '2026-01-10T10:30:00.000Z', description: 'Data da compra' })
   purchasedAt: Date;
 
   @ApiProperty({ example: 349.9, description: 'Valor total' })
   total: number;
 
-  @ApiProperty({ example: 349.9, description: 'Valor recebido até o momento' })
-  totalReceived: number;
-
   @ApiProperty({ example: 139.9, description: 'Lucro total' })
   profit: number;
-
-  @ApiProperty({ example: 139.9, description: 'Lucro recebido até o momento' })
-  profitReceived: number;
 }
 
 class CustomerMetricsDto {
