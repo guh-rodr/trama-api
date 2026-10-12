@@ -107,7 +107,7 @@ export class StatsService {
         const result = await this.prisma.cashFlowTransaction.groupBy({
           by: ['flow'],
           where: {
-            date: {
+            ocurredAt: {
               gte: range.startDate,
               lte: range.endDate,
             },
@@ -115,8 +115,8 @@ export class StatsService {
           _sum: { value: true },
         });
 
-        const totalInflow = result.find((r) => r.flow === 'inflow')?._sum.value ?? 0;
-        const totalOutflow = result.find((r) => r.flow === 'outflow')?._sum.value ?? 0;
+        const totalInflow = result.find((r) => r.flow === 'INFLOW')?._sum.value ?? 0;
+        const totalOutflow = result.find((r) => r.flow === 'OUTFLOW')?._sum.value ?? 0;
 
         chartData.set(index, { col_1: totalInflow, col_2: totalOutflow });
       }),
@@ -141,12 +141,9 @@ export class StatsService {
         });
 
         const groupedTransactions = await this.prisma.cashFlowTransaction.groupBy({
-          by: ['flow', 'saleId'],
+          by: ['flow', 'origin'],
           where: {
-            category: {
-              in: ['OPERATIONAL_EXPENSE', 'PERSONNEL_EXPENSE', 'TAX_EXPENSE', 'SALES_REVENUE', 'OTHER_INCOME'],
-            },
-            date: {
+            ocurredAt: {
               gte: range.startDate,
               lte: range.endDate,
             },
@@ -154,8 +151,12 @@ export class StatsService {
           _sum: { value: true },
         });
 
-        const manualRevenue = groupedTransactions.find((t) => t.flow === 'inflow' && !t.saleId)?._sum.value ?? 0;
-        const expensesOutflow = groupedTransactions.find((t) => t.flow === 'outflow')?._sum.value ?? 0;
+        const manualRevenue = groupedTransactions
+          .filter((t) => t.flow === 'INFLOW' && t.origin === 'MANUAL')
+          .reduce((total, t) => total + (t._sum.value ?? 0), 0);
+        const expensesOutflow = groupedTransactions
+          .filter((t) => t.flow === 'OUTFLOW')
+          .reduce((total, t) => total + (t._sum.value ?? 0), 0);
 
         const grossRevenue = (sales._sum.total ?? 0) + manualRevenue;
         const costs = (items._sum.costPrice ?? 0) + expensesOutflow;
@@ -204,12 +205,9 @@ export class StatsService {
       }),
 
       this.prisma.cashFlowTransaction.groupBy({
-        by: ['flow', 'saleId'],
+        by: ['flow', 'origin'],
         where: {
-          category: {
-            in: ['OPERATIONAL_EXPENSE', 'PERSONNEL_EXPENSE', 'TAX_EXPENSE', 'SALES_REVENUE', 'OTHER_INCOME'],
-          },
-          date: {
+          ocurredAt: {
             gte: start,
             lte: end,
           },
@@ -218,8 +216,12 @@ export class StatsService {
       }),
     ]);
 
-    const expensesTotal = transactionsAgg.find((t) => t.flow === 'outflow')?._sum.value ?? 0;
-    const manualRevenue = transactionsAgg.find((t) => t.flow === 'inflow' && !t.saleId)?._sum.value ?? 0;
+    const expensesTotal = transactionsAgg
+      .filter((t) => t.flow === 'OUTFLOW')
+      .reduce((total, t) => total + (t._sum.value ?? 0), 0);
+    const manualRevenue = transactionsAgg
+      .filter((t) => t.flow === 'INFLOW' && t.origin === 'MANUAL')
+      .reduce((total, t) => total + (t._sum.value ?? 0), 0);
 
     const saleCount = saleAgg._count.id ?? 0;
     const invoicing = manualRevenue + (saleAgg._sum.total ?? 0);
@@ -245,25 +247,25 @@ export class StatsService {
     const [revenueAgg, inflowAgg, outflowAgg, historicalAgg] = await Promise.all([
       this.prisma.cashFlowTransaction.aggregate({
         where: {
-          date: { gte: start, lte: end },
+          ocurredAt: { gte: start, lte: end },
           category: 'SALES_REVENUE',
         },
         _sum: { value: true },
       }),
 
       this.prisma.cashFlowTransaction.aggregate({
-        where: { date: { gte: start, lte: end }, flow: 'inflow' },
+        where: { ocurredAt: { gte: start, lte: end }, flow: 'INFLOW' },
         _sum: { value: true },
       }),
 
       this.prisma.cashFlowTransaction.aggregate({
-        where: { date: { gte: start, lte: end }, flow: 'outflow' },
+        where: { ocurredAt: { gte: start, lte: end }, flow: 'OUTFLOW' },
         _sum: { value: true },
       }),
 
       this.prisma.cashFlowTransaction.groupBy({
         by: ['flow'],
-        where: { date: { lte: end } },
+        where: { ocurredAt: { lte: end } },
         _sum: { value: true },
       }),
     ]);
@@ -274,8 +276,8 @@ export class StatsService {
 
     const periodResult = inflowTotal - outflowTotal;
 
-    const histInflow = historicalAgg.find((x) => x.flow === 'inflow')?._sum.value ?? 0;
-    const histOutflow = historicalAgg.find((x) => x.flow === 'outflow')?._sum.value ?? 0;
+    const histInflow = historicalAgg.find((x) => x.flow === 'INFLOW')?._sum.value ?? 0;
+    const histOutflow = historicalAgg.find((x) => x.flow === 'OUTFLOW')?._sum.value ?? 0;
 
     const currentBalance = histInflow - histOutflow;
 
@@ -289,8 +291,6 @@ export class StatsService {
   }
 
   async getTopCategories(startDate: string, endDate: string) {
-    // o groupBy do prisma não suporta agrupar por campos de tabelas relacionadas, por isso o uso de raw query
-
     const query = await this.prisma.$queryRaw`
       SELECT
         si."categoryName" as category,
