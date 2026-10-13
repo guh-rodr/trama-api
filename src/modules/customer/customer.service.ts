@@ -62,7 +62,7 @@ export class CustomerService {
         _sum: { value: true },
         where: {
           flow: 'INFLOW',
-          sale: {
+          payment: {
             customerId,
           },
         },
@@ -135,7 +135,7 @@ export class CustomerService {
   }
 
   async getSales(customerId: string): Promise<CustomerSaleResponseDto[]> {
-    const { sales } = await this.prisma.contact.findUniqueOrThrow({
+    const customer = await this.prisma.contact.findUniqueOrThrow({
       where: { id: customerId },
       select: {
         sales: {
@@ -144,19 +144,18 @@ export class CustomerService {
             total: true,
             profit: true,
             purchasedAt: true,
-            _count: { select: { items: true, transactions: true } },
+            _count: { select: { items: true, receivables: true } },
           },
         },
       },
     });
 
-    const result = sales.map((sale): CustomerSaleResponseDto => {
+    const result = customer.sales.map((sale): CustomerSaleResponseDto => {
       return {
         id: sale.id,
         itemCount: sale._count.items,
-        installmentCount: sale._count.transactions,
+        installmentCount: sale._count.receivables,
         purchasedAt: sale.purchasedAt,
-
         total: sale.total,
         profit: sale.profit,
       };
