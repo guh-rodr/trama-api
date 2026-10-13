@@ -137,19 +137,23 @@ export class SaleService {
           customerId: data.customerId,
           total: summary.total,
           paid: summary.total,
+          description: 'Venda à vista',
+          occurredAt: purchasedAt,
           allocations: {
             create: data.payments.map((p) => ({
               amount: p.value,
               payment: {
                 create: {
+                  type: 'CHARGE',
                   method: p.method,
                   total: p.value,
                   paidAt: purchasedAt,
                   transaction: {
                     create: {
+                      ocurredAt: purchasedAt,
+                      origin: 'PAYMENT',
                       category: 'SALES_REVENUE',
                       flow: 'INFLOW',
-                      date: purchasedAt,
                       description: 'Venda realizada',
                       value: p.value,
                     },
@@ -165,7 +169,7 @@ export class SaleService {
         if (data.receivables.length === 0) throw new BadRequestException('Nenhuma parcela definida');
 
         data.receivables.forEach((r, idx) => {
-          const dueDate = DateTime.fromISO(r.dueDate, { zone: 'America/Sao_Paulo' }).toJSDate();
+          const dueAt = DateTime.fromISO(r.dueDate, { zone: 'America/Sao_Paulo' }).toJSDate();
 
           receivablesToCreate.push({
             customerId: data.customerId,
@@ -175,7 +179,9 @@ export class SaleService {
             installmentCount: data.receivables.length,
             installmentIdx: idx + 1,
             total: r.value,
-            dueDate,
+            description: `Venda parcelada - ${data.receivables.length}x`,
+            occurredAt: purchasedAt,
+            dueAt,
           });
         });
       }
@@ -187,6 +193,8 @@ export class SaleService {
           status: 'PENDING',
           total: summary.total - (data.entry?.value ?? 0),
           type: 'TAB',
+          description: 'Venda na nota',
+          occurredAt: purchasedAt,
         });
       }
 
@@ -198,21 +206,24 @@ export class SaleService {
           customerId: data.customerId,
           total: data.entry.value,
           paid: data.entry.value,
-          dueDate: null,
+          dueAt: null,
+          description: '',
+          occurredAt: purchasedAt,
           allocations: {
             create: {
               amount: data.entry.value,
               payment: {
                 create: {
+                  type: 'CHARGE',
                   method: data.entry.method,
                   total: data.entry.value,
                   paidAt: purchasedAt,
-                  transactions: {
+                  transaction: {
                     create: {
+                      ocurredAt: purchasedAt,
                       category: 'SALES_REVENUE',
                       origin: 'PAYMENT',
-                      date: purchasedAt,
-                      description: 'Entrada ',
+                      description: 'Entrada',
                       flow: 'INFLOW',
                       value: data.entry.value,
                     },
