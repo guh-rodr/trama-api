@@ -4,6 +4,7 @@ import { HealthModule } from './health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { TransactionModule } from './modules/cashflow/transaction.module';
 import { CategoryModule } from './modules/category/category.module';
+import { ContactModule } from './modules/contact/contact.module';
 import { CustomerModule } from './modules/customer/customer.module';
 import { ProductModule } from './modules/product/product.module';
 import { SaleModule } from './modules/sales/sale.module';
@@ -22,6 +23,7 @@ import { StockMovementModule } from './modules/stock-movement/stock-movement.mod
     TransactionModule,
     ProductModule,
     StockMovementModule,
+    ContactModule,
   ],
 })
 export class AppModule {}
