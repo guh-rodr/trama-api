@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { CreateCategoryBodyDto } from './dto/create-category.dto';
+import { ListCategoriesBodyDto, ListCategoriesQueryDto } from './dto/list-category.dto';
 import { UpdateCategoryBodyDto } from './dto/update-category.dto';
 
 @Controller('categories')
@@ -25,5 +26,10 @@ export class CategoryController {
   @Post()
   create(@Body() body: CreateCategoryBodyDto) {
     return this.categoryService.create(body);
+  }
+
+  @Post('/list')
+  async listTable(@Query() query: ListCategoriesQueryDto, @Body() body: ListCategoriesBodyDto) {
+    return this.categoryService.listTable(query, body);
   }
 }

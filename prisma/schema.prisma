@@ -172,6 +172,12 @@ model CashFlowTransaction {
   reversedBy   CashFlowTransaction[] @relation("CashFlowReversal")
 }
 
+view CategoryStats {
+  id           String
+  name         String
+  productCount Int
+}
+
 view ContactStats {
   id              String
   name            String
