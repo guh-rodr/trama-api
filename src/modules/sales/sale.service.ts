@@ -139,6 +139,7 @@ export class SaleService {
           paid: summary.total,
           description: 'Venda à vista',
           occurredAt: purchasedAt,
+          dueAt: purchasedAt,
           allocations: {
             create: data.payments.map((p) => ({
               amount: p.value,
