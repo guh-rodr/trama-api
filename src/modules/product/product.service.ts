@@ -275,6 +275,7 @@ export class ProductService {
         where: { id: productId },
         data: {
           name: data.name,
+          categoryId: data.categoryId,
           isVariable: isNowVariable,
         },
         select: ProductService.productSelectFields,
