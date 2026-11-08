@@ -150,16 +150,13 @@ export class ReceivableService {
 
   async findByCustomer(customerId: string) {
     const receivables = await this.prismaService.receivable.findMany({
-      where: { customerId, status: { not: 'PAID' } },
+      where: { customerId, status: { in: ['PENDING', 'PARTIAL'] } },
       select: {
         id: true,
-        type: true,
         total: true,
         paid: true,
-        installmentIdx: true,
-        installmentCount: true,
-        dueAt: true,
         createdAt: true,
+        description: true,
       },
       orderBy: {
         createdAt: 'asc',
