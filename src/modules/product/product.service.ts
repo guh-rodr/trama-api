@@ -73,6 +73,28 @@ export class ProductService {
     return this.toProductEditDto(product);
   }
 
+  async listAutocomplete(search: string) {
+    const products = await this.prisma.product.findMany({
+      where: {
+        OR: [
+          {
+            name: {
+              startsWith: search,
+            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        category: { select: { id: true, name: true } },
+      },
+      take: 5,
+    });
+
+    return products;
+  }
+
   async listTable(options: ListProductsQueryDto, filter: ListProductsBodyDto) {
     const sort = buildPrismaSort(options, PRODUCT_SORTABLE_FIELDS);
     const pagination = buildPrismaPagination(options);

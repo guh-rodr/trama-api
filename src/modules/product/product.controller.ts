@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Public } from 'src/common/decorators/public.decorator';
 import { CreateProductBodyDto } from './dto/create-product.dto';
 import { BulkDeleteProductsBodyDto } from './dto/delete-product.dto';
 import { ListProductsBodyDto, ListProductsQueryDto } from './dto/list-products.dto';
@@ -12,6 +13,12 @@ export class ProductController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.productService.findOne(id);
+  }
+
+  @Get('/autocomplete')
+  @Public()
+  listAutocomplete(@Query('search') search: string) {
+    return this.productService.listAutocomplete(search || '');
   }
 
   @Post('/list')
